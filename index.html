@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Plataforma de Reseñas Inteligente</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        font-family: system-ui, Arial, sans-serif;
+        max-width: 900px;
+        margin: 24px auto;
+        padding: 0 16px;
+      }
+      section {
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      input,
+      button,
+      textarea {
+        padding: 8px;
+        margin: 6px 0;
+        width: 100%;
+      }
+      .row {
+        display: flex;
+        gap: 12px;
+      }
+      .row > div {
+        flex: 1;
+      }
+      code {
+        background: #f6f6f6;
+        padding: 2px 6px;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Plataforma de Reseñas 🤖</h1>
+
+    <section>
+      <h2>Config</h2>
+      <div>API: <code id="api"></code></div>
+    </section>
+
+    <section>
+      <h2>Registro</h2>
+      <input id="regEmail" placeholder="Email" />
+      <input id="regPwd" type="password" placeholder="Password (min 6)" />
+      <button onclick="register()">Registrarse</button>
+      <div id="regMsg"></div>
+    </section>
+
+    <section>
+      <h2>Login</h2>
+      <input id="logEmail" placeholder="Email" />
+      <input id="logPwd" type="password" placeholder="Password" />
+      <button onclick="login()">Iniciar sesión</button>
+      <div><strong>Token:</strong> <code id="token"></code></div>
+    </section>
+
+    <section id="protected" style="display: none">
+      <h2>Nueva Reseña (protegido)</h2>
+      <input id="prod" placeholder="Producto (ej. iPhone 15)" />
+      <textarea
+        id="text"
+        rows="4"
+        placeholder="Escribe tu reseña..."
+      ></textarea>
+      <button onclick="createReview()">Enviar reseña</button>
+      <div id="revMsg"></div>
+    </section>
+
+    <section>
+      <h2>Ver Reseñas Públicas por Producto</h2>
+      <div class="row">
+        <div>
+          <input id="searchProd" placeholder="Producto (ej. iPhone 15)" />
+        </div>
+        <div>
+          <button onclick="loadReviews()">Buscar</button>
+        </div>
+      </div>
+      <div id="list"></div>
+    </section>
+  </body>
+</html>
