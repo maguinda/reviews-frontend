@@ -23,6 +23,7 @@
         padding: 8px;
         margin: 6px 0;
         width: 100%;
+        box-sizing: border-box;
       }
       .row {
         display: flex;
@@ -35,6 +36,38 @@
         background: #f6f6f6;
         padding: 2px 6px;
         border-radius: 6px;
+      }
+      .error {
+        color: #b91c1c;
+      }
+      .ok {
+        color: #15803d;
+      }
+      .review-card {
+        border: 1px solid #eee;
+        border-radius: 8px;
+        padding: 8px 12px;
+        margin: 6px 0;
+      }
+      .review-header {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.9rem;
+        margin-bottom: 4px;
+      }
+      .pill {
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+      }
+      .pill-pos {
+        background: #dcfce7;
+      }
+      .pill-neg {
+        background: #fee2e2;
+      }
+      .pill-neu {
+        background: #e5e7eb;
       }
     </style>
   </head>
@@ -60,6 +93,7 @@
       <input id="logPwd" type="password" placeholder="Password" />
       <button onclick="login()">Iniciar sesión</button>
       <div><strong>Token:</strong> <code id="token"></code></div>
+      <div id="logMsg"></div>
     </section>
 
     <section id="protected" style="display: none">
@@ -86,5 +120,220 @@
       </div>
       <div id="list"></div>
     </section>
+
+    <script>
+      // 👇 URL de tu backend en Render
+      const API_BASE = "https://reviews-backend-pitj.onrender.com";
+
+      document.getElementById("api").textContent = API_BASE;
+
+      let authToken = "";
+
+      function setMessage(id, msg, ok = true) {
+        const el = document.getElementById(id);
+        el.textContent = msg;
+        el.className = ok ? "ok" : "error";
+      }
+
+      // ========== REGISTRO: POST /register ==========
+      async function register() {
+        const email = document.getElementById("regEmail").value.trim();
+        const password = document.getElementById("regPwd").value.trim();
+
+        if (!email || !password) {
+          setMessage("regMsg", "Completa email y password.", false);
+          return;
+        }
+
+        try {
+          const res = await fetch(`${API_BASE}/register`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ email, password }),
+          });
+
+          const data = await res.json().catch(() => ({}));
+
+          if (!res.ok) {
+            setMessage(
+              "regMsg",
+              data.detail || `Error al registrar (${res.status})`,
+              false
+            );
+            return;
+          }
+
+          setMessage("regMsg", "Usuario creado con éxito ✅", true);
+        } catch (err) {
+          console.error(err);
+          setMessage("regMsg", "Error de red al registrar.", false);
+        }
+      }
+
+      // ========== LOGIN: POST /token ==========
+      async function login() {
+        const email = document.getElementById("logEmail").value.trim();
+        const password = document.getElementById("logPwd").value.trim();
+
+        if (!email || !password) {
+          setMessage("logMsg", "Completa email y password.", false);
+          return;
+        }
+
+        try {
+          const body = new URLSearchParams();
+          body.append("username", email); // OAuth2PasswordRequestForm usa "username"
+          body.append("password", password);
+
+          const res = await fetch(`${API_BASE}/token`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body,
+          });
+
+          const data = await res.json().catch(() => ({}));
+
+          if (!res.ok) {
+            setMessage(
+              "logMsg",
+              data.detail || `Error al iniciar sesión (${res.status})`,
+              false
+            );
+            return;
+          }
+
+          authToken = data.access_token;
+          document.getElementById("token").textContent = authToken;
+          document.getElementById("protected").style.display = "block";
+          setMessage("logMsg", "Login correcto ✅", true);
+        } catch (err) {
+          console.error(err);
+          setMessage("logMsg", "Error de red al iniciar sesión.", false);
+        }
+      }
+
+      // ========== CREAR RESEÑA: POST /reviews ==========
+      async function createReview() {
+        if (!authToken) {
+          setMessage("revMsg", "Debes iniciar sesión primero.", false);
+          return;
+        }
+
+        const producto = document.getElementById("prod").value.trim();
+        const texto_resena = document.getElementById("text").value.trim();
+
+        if (!producto || !texto_resena) {
+          setMessage("revMsg", "Completa producto y texto.", false);
+          return;
+        }
+
+        try {
+          const res = await fetch(`${API_BASE}/reviews`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              // Tu backend lee el header Authorization a mano:
+              Authorization: `Bearer ${authToken}`,
+            },
+            body: JSON.stringify({
+              producto,
+              texto_resena,
+            }),
+          });
+
+          const data = await res.json().catch(() => ({}));
+
+          if (!res.ok) {
+            setMessage(
+              "revMsg",
+              data.detail || `Error al crear reseña (${res.status})`,
+              false
+            );
+            return;
+          }
+
+          setMessage(
+            "revMsg",
+            "Reseña creada y analizada correctamente ✅",
+            true
+          );
+          document.getElementById("prod").value = "";
+          document.getElementById("text").value = "";
+        } catch (err) {
+          console.error(err);
+          setMessage("revMsg", "Error de red al crear reseña.", false);
+        }
+      }
+
+      // ========== VER RESEÑAS: GET /reviews/{producto} ==========
+      async function loadReviews() {
+        const producto = document.getElementById("searchProd").value.trim();
+
+        if (!producto) {
+          document.getElementById("list").innerHTML =
+            "<p class='error'>Escribe un producto para buscar.</p>";
+          return;
+        }
+
+        try {
+          const res = await fetch(
+            `${API_BASE}/reviews/${encodeURIComponent(producto)}`
+          );
+
+          const data = await res.json().catch(() => []);
+
+          if (!res.ok) {
+            document.getElementById("list").innerHTML =
+              "<p class='error'>Error al cargar reseñas.</p>";
+            return;
+          }
+
+          if (!Array.isArray(data) || data.length === 0) {
+            document.getElementById("list").innerHTML =
+              "<p>No hay reseñas para este producto.</p>";
+            return;
+          }
+
+          const html = data
+            .map((r) => {
+              const sent = (r.sentimiento || "").toLowerCase();
+              let pillClass = "pill-neu";
+              let label = sent || "desconocido";
+
+              if (sent.includes("positivo")) {
+                pillClass = "pill-pos";
+                label = "positivo";
+              } else if (sent.includes("negativo")) {
+                pillClass = "pill-neg";
+                label = "negativo";
+              } else if (sent.includes("neutro")) {
+                pillClass = "pill-neu";
+                label = "neutro";
+              }
+
+              return `
+                <div class="review-card">
+                  <div class="review-header">
+                    <span><strong>${r.producto || producto}</strong></span>
+                    <span class="pill ${pillClass}">${label}</span>
+                  </div>
+                  <div>${r.texto_resena || ""}</div>
+                </div>
+              `;
+            })
+            .join("");
+
+          document.getElementById("list").innerHTML = html;
+        } catch (err) {
+          console.error(err);
+          document.getElementById("list").innerHTML =
+            "<p class='error'>Error de red al cargar reseñas.</p>";
+        }
+      }
+    </script>
   </body>
 </html>
